@@ -30,10 +30,8 @@ class ConfigParserTomlMixin:
             section_to_copy = (
                 toml_config if not is_pyproject else toml_config.get('tool', {})
             )
-
-            for section, config in section_to_copy.items():
-                self.add_section(section)
-                self._sections[section] = self._dict(config)
+            section_to_copy = convert_item(section_to_copy)
+            self.read_dict(section_to_copy)
         else:
             super(ConfigParserTomlMixin, self)._read(fp, filename)
 
@@ -42,6 +40,20 @@ class ConfigParserTomlMixin:
             return value
         else:
             return super()._convert_to_boolean(value)
+
+
+def convert_item(d):
+    d_new = {}
+    for k, v in d.items():
+        if isinstance(v, dict):
+            v = convert_item(v)
+        elif isinstance(v, list):
+            # assumes that the list item is not a dict
+            v = ','.join(str(elem) for elem in v)
+        else:
+            v = str(v)
+        d_new[k] = v
+    return d_new
 
 
 class DivertingRawConfigParser(ConfigParserTomlMixin, configparser.RawConfigParser):
